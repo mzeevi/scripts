@@ -16,15 +16,11 @@ while read LINE
 	# parse image to name and tag (if tag is not specified, use latest)
 	docker_image_name=$(cut -d ':' -f 1 <<< $docker_image)
 	docker_image_tag=$(cut -d ':' -f 2 <<< $docker_image)
-	
-	echo $docker_image_tag
 
 	if [ "$docker_image_name" == "$docker_image_tag" ]; then
 		docker_image_tag='latest'
 	fi
-	
-	echo $docker_image_tag
-	
+		
 	# pull image
 	docker pull $docker_image
 	
@@ -32,8 +28,6 @@ while read LINE
 	docker_image_clean_name=$(cut -d '/' -f 2 <<< $docker_image_name)
 
 	compressed_image_name_tag=$docker_image_clean_name"_"$docker_image_tag
-
-	echo $output_dir"/"$compressed_image_name_tag.tar.gz
 
 	docker save $docker_image > $output_dir"/"$compressed_image_name_tag.tar.gz
 	p7zip $output_dir"/"$compressed_image_name_tag.tar.gz
