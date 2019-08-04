@@ -27,8 +27,8 @@ while read LINE
 	# remove "/" from image name, for example from prom/node-exporter, return node-exporter
 	docker_image_clean_name=$(cut -d '/' -f 2 <<< $docker_image_name)
 
+	# save and compress image
 	compressed_image_name_tag=$docker_image_clean_name"_"$docker_image_tag
-
 	docker save $docker_image > $output_dir"/"$compressed_image_name_tag.tar.gz
 	p7zip $output_dir"/"$compressed_image_name_tag.tar.gz
 done < $input_file
