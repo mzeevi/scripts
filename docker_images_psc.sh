@@ -5,9 +5,18 @@
 #
 # written: 03/08/2019
 
+read -p 'insert full path to file containing images to save and compress: ' INPUT_FILE
+read -p 'insert full path to output dir: ' OUTPUT_DIR
 
-read -p 'insert path to file containing images to save and compress: ' input_file
-read -p 'insert path to output dir: ' output_dir
+# check if output dir path has / at the end, if no - add it
+if [ ! ${OUTPUT_DIR: -1} == '/' ]; then
+	OUTPUT_DIR+="/"
+fi
+
+# check if output dir exists, if not - create it
+if [ ! -d "$OUTPUT_DIR" ]; then
+	mkdir $OUTPUT_DIR
+fi
 
 while read LINE
     do
@@ -29,6 +38,8 @@ while read LINE
 
 	# save and compress image
 	compressed_image_name_tag=$docker_image_clean_name"_"$docker_image_tag
-	docker save $docker_image > $output_dir"/"$compressed_image_name_tag.tar.gz
-	p7zip $output_dir"/"$compressed_image_name_tag.tar.gz
-done < $input_file
+	output_file_path="${OUTPUT_DIR}${compressed_image_name_tag}.tar.gz"
+
+	docker save $docker_image > $output_file_path
+	p7zip $output_file_path
+done < $INPUT_FILE
