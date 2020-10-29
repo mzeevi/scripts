@@ -27,7 +27,6 @@ def get_resource_directory(redfishobj):
     resources = []
 
     if response.status == 200:
-        sys.stdout.write("\tFound resource directory at /redfish/v1/resourcedirectory" + "\n\n")
         resources = response.dict["Instances"]
     else:
         sys.stderr.write("\tResource directory missing at /redfish/v1/resourcedirectory" + "\n")
@@ -43,12 +42,15 @@ def get_ilo_disk_info(redfishobj, redfishobj_resources):
             array_controllers_uri = redfishobj.get(smartstorage_uri).obj['Links']['ArrayControllers']['@odata.id']
             array_controllers = redfishobj.get(array_controllers_uri).obj['Members']
             for controller in array_controllers:
+                controller_dict = {}
+
                 _controller_i_uri = controller['@odata.id']
                 controller_i = redfishobj.get(_controller_i_uri)
 
                 # get controller model and status
-                controller_i_model = controller_i.obj['Model']
-                disk_info_list.append(controller_i_model)
+                controller_dict['model'] = controller_i.obj['Model']
+
+                disk_info_list.append(controller_dict)
 
                 # _physical_disks_uri = controller_i.obj['Links']['PhysicalDrives']['@odata.id']
                 # physical_disks = redfishobj.get(_physical_disks_uri).obj['Members']
@@ -65,17 +67,38 @@ def get_ilo_memory_info(redfishobj, redfishobj_resources):
             memory_uri = instance['@odata.id']
             memory_dimms = redfishobj.get(memory_uri).obj['Members']
             for dimm in memory_dimms:
+                memory_dict = {}
+
                 _dimm_i = dimm['@odata.id']
                 dimm_i = redfishobj.get(_dimm_i)
-                dimm_i_name = dimm_i.obj['Name']
-                dimm_i_data_width = dimm_i.obj['DataWidthBits']
 
-                memory_info_list.append(dimm_i_name)
-                memory_info_list.append(dimm_i_data_width)
+                memory_dict['Name'] = dimm_i.obj['Name']
+                memory_dict['DataWidthBits'] = dimm_i.obj['DataWidthBits']
 
+                memory_info_list.append(memory_dict)
             break
 
     return memory_info_list
+
+
+def get_mac_addresses(redfishobj, redfishobj_resources):
+    ethernet_interfaces_list = []
+    for instance in redfishobj_resources:
+        if 'EthernetInterfaceCollection' in instance['@odata.type'] and 'EthernetInterfaces' in instance['@odata.id']:
+            ethernet_interfaces_uri = instance['@odata.id']
+            ethernet_interfaces = redfishobj.get(ethernet_interfaces_uri).obj['Members']
+            for interface in ethernet_interfaces:
+                interface_dict = {}
+
+                _interface_i_uri = interface['@odata.id']
+                interface_i = redfishobj.get(_interface_i_uri)
+
+                interface_dict['interface_name'] = interface_i.obj['Name']
+                interface_dict['interface_mac'] = interface_i.obj['MACAddress']
+
+                ethernet_interfaces_list.append(interface_dict)
+            break
+    return ethernet_interfaces_list
 
 
 def get_ilo_processors_info(redfishobj, redfishobj_resources):
@@ -85,19 +108,18 @@ def get_ilo_processors_info(redfishobj, redfishobj_resources):
             processor_uri = instance['@odata.id']
             processors = redfishobj.get(processor_uri).obj['Members']
             for processor in processors:
+                processor_dict = {}
+
                 _processor_i = processor['@odata.id']
                 processor_i = redfishobj.get(_processor_i)
-                processor_i_model = processor_i.obj['Model']
-                processor_i_id = processor_i.obj['Id']
-                processor_i_max_speed = processor_i.obj['MaxSpeedMHz']
-                processor_i_total_cores = processor_i.obj['TotalCores']
-                processor_i_total_threads = processor_i.obj['TotalThreads']
 
-                processors_info_list.append(processor_i_id)
-                processors_info_list.append(processor_i_model)
-                processors_info_list.append(processor_i_max_speed)
-                processors_info_list.append(processor_i_total_cores)
-                processors_info_list.append(processor_i_total_threads)
+                processor_dict['id'] = processor_i.obj['Id']
+                processor_dict['model'] = processor_i.obj['Model']
+                processor_dict['max_speed_mhz'] = processor_i.obj['MaxSpeedMHz']
+                processor_dict['total_cores'] = processor_i.obj['TotalCores']
+                processor_dict['total_threads'] = processor_i.obj['TotalThreads']
+
+                processors_info_list.append(processor_dict)
 
             break
 
@@ -108,15 +130,21 @@ def get_ilo_basic_info(redfishobj, redfishobj_resources):
     basic_info_list = []
     for instance in redfishobj_resources:
         if 'ServiceRoot' in instance['@odata.type'] and '/redfish/v1/' in instance['@odata.id']:
+            basic_info_dict = {}
             root_uri = instance['@odata.id']
             root = redfishobj.get(root_uri)
+
             hostname = root.obj['Oem']['Hpe']['Manager'][0]['HostName']
-            basic_info_list.append(hostname)
+
+            basic_info_dict['hostname'] = hostname
+
+            basic_info_list.append(basic_info_dict)
         break
     return basic_info_list
 
 
 def get_health_status(redfishobj, redfishobj_resources):
+    health_status_list = []
     for instance in redfishobj_resources:
         if 'ComputerSystemCollection' in instance['@odata.type'] and 'Systems' in instance['@odata.id']:
             systems_uri = instance['@odata.id']
@@ -193,7 +221,8 @@ def get_health_status(redfishobj, redfishobj_resources):
                 else:
                     health_status_dict['temperatures_status'] = 0
 
-                print(json.dumps(health_status_dict))
+                health_status_list.append(health_status_dict)
+    return health_status_list
 
 
 if __name__ == "__main__":
@@ -211,22 +240,17 @@ if __name__ == "__main__":
 
             # create a session and login to ilo
             REDFISHOBJ = connect_to_ilo(SYSTEM_URL, LOGIN_ACCOUNT, LOGIN_PASSWORD)
-
             REDFISHOBJ_RESOURCES = get_resource_directory(REDFISHOBJ)
 
-            INFO_LIST = []
+            # get information
+            INFO_DICT = {'basic_info': get_ilo_basic_info(REDFISHOBJ, REDFISHOBJ_RESOURCES),
+                         'disk_info': get_ilo_disk_info(REDFISHOBJ, REDFISHOBJ_RESOURCES),
+                         'processor_info': get_ilo_processors_info(REDFISHOBJ, REDFISHOBJ_RESOURCES),
+                         'memory_info': get_ilo_memory_info(REDFISHOBJ, REDFISHOBJ_RESOURCES),
+                         'ethernet_interfaces': get_mac_addresses(REDFISHOBJ, REDFISHOBJ_RESOURCES),
+                         'status': get_health_status(REDFISHOBJ, REDFISHOBJ_RESOURCES)}
 
-            # populate info list
-            BASIC_INFO_LIST = get_ilo_basic_info(REDFISHOBJ, REDFISHOBJ_RESOURCES)
-            DISK_INFO_LIST = get_ilo_disk_info(REDFISHOBJ, REDFISHOBJ_RESOURCES)
-            PROCESSOR_INFO_LIST = get_ilo_processors_info(REDFISHOBJ, REDFISHOBJ_RESOURCES)
-            MEMORY_INFO_LIST = get_ilo_memory_info(REDFISHOBJ, REDFISHOBJ_RESOURCES)
-
-            INFO_LIST = INFO_LIST + BASIC_INFO_LIST + DISK_INFO_LIST + PROCESSOR_INFO_LIST + MEMORY_INFO_LIST
-            writer.writerow(INFO_LIST)
-
-            # works for gen 10 only
-            # get_health_status(REDFISHOBJ, REDFISHOBJ_RESOURCES)
+            print(json.dumps(INFO_DICT))
 
             # log out from ilo
             REDFISHOBJ.logout()
