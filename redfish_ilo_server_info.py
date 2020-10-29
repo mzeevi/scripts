@@ -2,7 +2,6 @@ import redfish
 from redfish.rest.v1 import ServerDownOrUnreachableError
 import sys
 import json
-import csv
 
 
 def connect_to_ilo(system_url, login_account, login_password):
@@ -231,26 +230,24 @@ if __name__ == "__main__":
                    "https://ilorestfulapiexplorer.ext.hpe.com/",
                    "https://ilorestfulapiexplorer.ext.hpe.com/",
                    "https://ilorestfulapiexplorer.ext.hpe.com/"]
-    with open('information.csv', 'w', newline='') as file:
-        writer = csv.writer(file)
 
-        for SYSTEM_URL in SYSTEM_URLS:
-            LOGIN_ACCOUNT = "admin"
-            LOGIN_PASSWORD = "password"
+    for SYSTEM_URL in SYSTEM_URLS:
+        LOGIN_ACCOUNT = "admin"
+        LOGIN_PASSWORD = "password"
 
-            # create a session and login to ilo
-            REDFISHOBJ = connect_to_ilo(SYSTEM_URL, LOGIN_ACCOUNT, LOGIN_PASSWORD)
-            REDFISHOBJ_RESOURCES = get_resource_directory(REDFISHOBJ)
+        # create a session and login to ilo
+        REDFISHOBJ = connect_to_ilo(SYSTEM_URL, LOGIN_ACCOUNT, LOGIN_PASSWORD)
+        REDFISHOBJ_RESOURCES = get_resource_directory(REDFISHOBJ)
 
-            # get information
-            INFO_DICT = {'basic_info': get_ilo_basic_info(REDFISHOBJ, REDFISHOBJ_RESOURCES),
-                         'disk_info': get_ilo_disk_info(REDFISHOBJ, REDFISHOBJ_RESOURCES),
-                         'processor_info': get_ilo_processors_info(REDFISHOBJ, REDFISHOBJ_RESOURCES),
-                         'memory_info': get_ilo_memory_info(REDFISHOBJ, REDFISHOBJ_RESOURCES),
-                         'ethernet_interfaces': get_mac_addresses(REDFISHOBJ, REDFISHOBJ_RESOURCES),
-                         'status': get_health_status(REDFISHOBJ, REDFISHOBJ_RESOURCES)}
+        # get information
+        INFO_DICT = {'basic_info': get_ilo_basic_info(REDFISHOBJ, REDFISHOBJ_RESOURCES),
+                     'disk_info': get_ilo_disk_info(REDFISHOBJ, REDFISHOBJ_RESOURCES),
+                     'processor_info': get_ilo_processors_info(REDFISHOBJ, REDFISHOBJ_RESOURCES),
+                     'memory_info': get_ilo_memory_info(REDFISHOBJ, REDFISHOBJ_RESOURCES),
+                     'ethernet_interfaces': get_mac_addresses(REDFISHOBJ, REDFISHOBJ_RESOURCES),
+                     'status': get_health_status(REDFISHOBJ, REDFISHOBJ_RESOURCES)}
 
-            print(json.dumps(INFO_DICT))
+        print(json.dumps(INFO_DICT))
 
-            # log out from ilo
-            REDFISHOBJ.logout()
+        # log out from ilo
+        REDFISHOBJ.logout()
